@@ -1,5 +1,6 @@
 package com.savindu.accountManagement.mapper;
 
+import com.savindu.accountManagement.dto.CustomerDetailsDto;
 import com.savindu.accountManagement.dto.request.CustomerRequestDto;
 import com.savindu.accountManagement.dto.response.CustomerResponseDto;
 import com.savindu.accountManagement.entity.Customer;
@@ -15,4 +16,5 @@ public interface CustomerMapper {
     List<CustomerResponseDto> toDtoList(List<Customer> aClassList);
     Customer toEntity(CustomerRequestDto request);
     List<Customer> toEntityList(List<CustomerResponseDto> accountDtoList);
+    CustomerDetailsDto toCustomerDetailsDto(Customer customer);
 }

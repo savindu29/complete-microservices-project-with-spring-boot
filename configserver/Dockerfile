@@ -21,3 +21,5 @@ EXPOSE 8071
 
 # Execute the jar file
 ENTRYPOINT ["java", "-jar", "/app/configserver-0.0.1-SNAPSHOT.jar"]
+
+

@@ -1,0 +1,145 @@
+version: '3.8'
+
+x-resource-limits: &resource-limits
+  deploy:
+    resources:
+      limits:
+        memory: 2700m
+
+x-configserver-env: &configserver-env
+  CONFIG_SERVER_HOST: "http://configserver:8071"
+
+x-eureka-env: &eureka-env
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eurekaserver:8761/eureka/"
+
+x-shared-env: &shared-env
+  CONFIG_SERVER_HOST: "http://configserver:8071"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eurekaserver:8761/eureka/"
+
+
+services:
+  configserver:
+    image: savindu29/configserver:v2
+    container_name: configserver-ms
+    ports:
+      - "8071:8071"
+    healthcheck:
+      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      SPRING_APPLICATION_NAME: "configserver"
+    networks:
+      - bank
+    <<: *resource-limits
+
+  eurekaserver:
+    image: savindu29/eurekaserver:v2
+    container_name: eurekaserver
+    ports:
+      - "8761:8761"
+    depends_on:
+      configserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8761/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      SPRING_APPLICATION_NAME: "eurekaserver"
+      <<: *configserver-env
+
+    networks:
+      - bank
+    <<: *resource-limits
+
+  loanservice:
+    image: savindu29/loanservice:v2
+    container_name: loanservice
+    ports:
+      - "8093:8093"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8093/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      SPRING_APPLICATION_NAME: "loan"
+      SPRING_PROFILES_ACTIVE : "dev"
+      MYSQL_HOST : "host.docker.internal"
+      <<: *shared-env
+
+    networks:
+      - bank
+    <<: *resource-limits
+
+  cardservice:
+    image: savindu29/cardservice:v2
+    container_name: cardservice
+    ports:
+      - "8092:8092"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8092/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      SPRING_APPLICATION_NAME: "card"
+      SPRING_PROFILES_ACTIVE : "dev"
+      MYSQL_HOST : "host.docker.internal"
+      <<: *shared-env
+
+    networks:
+      - bank
+    <<: *resource-limits
+
+  accountservice:
+    image: savindu29/accountservice:v2
+    container_name: accountservice
+    ports:
+      - "8091:8091"
+    depends_on:
+      configserver:
+        condition: service_healthy
+      eurekaserver:
+        condition: service_healthy
+      cardservice:
+        condition: service_healthy
+      loanservice:
+        condition: service_healthy
+    healthcheck:
+      test: "curl --fail --silent localhost:8091/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    environment:
+      SPRING_APPLICATION_NAME: "account"
+      SPRING_PROFILES_ACTIVE : "dev"
+      MYSQL_HOST : "host.docker.internal"
+      <<: *shared-env
+
+    networks:
+      - bank
+    <<: *resource-limits
+
+
+networks:
+  bank:
+    driver: bridge
